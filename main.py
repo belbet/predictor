@@ -7,23 +7,71 @@ from rethinkdb import RethinkDB
 from rethinkdb.errors import RqlRuntimeError, RqlDriverError
 from sympy.solvers import solve
 from sympy import Symbol
-
+from flask import Flask, g, jsonify, render_template, request, abort
 from dotenv import load_dotenv
 load_dotenv()
 
+# Connections parameters
 RDB_HOST = os.environ.get('RDB_HOST') or 'localhost'
 RDB_DB = os.environ.get('RDB_DB') or 'test'
 RDB_PORT = os.environ.get('RDB_PORT') or 28015
 RDB_PASS = os.environ.get('RDB_PASS') or ''
+r = RethinkDB()
+
+
+def dbSetup():
+    connection = r.connect(host=RDB_HOST, port=RDB_PORT,
+                           db=RDB_DB, password=RDB_PASS)
+    try:
+        r.db_create(RDB_DB).run(connection)
+        r.db(RDB_DB).table_create('predictor').run(connection)
+        print('Database setup completed. Now run the app without --setup.')
+    except RqlRuntimeError:
+        print('App database already exists. Run the app without --setup.')
+    finally:
+        connection.close()
+
+
+# Weight parameters
 WEIGHT_H2H = float(os.environ.get('WEIGHT_H2H')) or 1.5
 WEIGHT_HOME = float(os.environ.get('WEIGHT_HOME')) or 1.2
 WEIGHT_EXT = float(os.environ.get('WEIGHT_EXT')) or 0.8
-r = RethinkDB()
 
-connection = r.connect(host=RDB_HOST, port=RDB_PORT,
-                       db="test", password=RDB_PASS)
-team1 = "dijon"
-team2 = "lens"
+app = Flask(__name__)
+app.config.from_object(__name__)
+
+
+@app.before_request
+def before_request():
+    try:
+        g.connection = r.connect(host=RDB_HOST, port=RDB_PORT,
+                                 db=RDB_DB, password=RDB_PASS)
+    except RqlDriverError:
+        abort(503, "No database connection could be established.")
+
+
+@app.teardown_request
+def teardown_request(exception):
+    try:
+        g.connection.close()
+    except AttributeError:
+        pass
+
+
+@app.route("/prediction", methods=['GET'])
+def get_prediction():
+    team1 = request.args.get('team1')
+    team2 = request.args.get('team2')
+    if team1 == None or team2 == None:
+        return {}
+    predictor = Predictor(team1, team2, w_h2h=WEIGHT_H2H,
+                          w_home=WEIGHT_HOME, w_ext=WEIGHT_EXT)
+    predictor.set_stats_team(team1)
+    predictor.set_stats_team(team2)
+    predictor.set_stats_h2h()
+    predictor.set_odds()
+    return json.dumps(predictor.result, indent=4)
+
 
 # 2017-08-01 00:00:00
 start_time = 1501545600
@@ -92,18 +140,18 @@ class Predictor():
     def _get_matches_home(self, team_id):
         return list(r.table("matches").between(r.epoch_time(start_time), r.epoch_time(end_time), index='Date').filter({
             "T1Id": team_id,
-        }).run(connection))
+        }).run(g.connection))
 
     def _get_matches_ext(self, team_id):
         return list(r.table("matches").between(r.epoch_time(start_time), r.epoch_time(end_time), index='Date').filter({
             "T2Id": team_id,
-        }).run(connection))
+        }).run(g.connection))
 
     def _get_matches_h2h(self):
         return list(r.table("matches").between(r.epoch_time(start_time), r.epoch_time(end_time), index='Date').filter({
             "T1Id": self.team1_id,
             "T2Id": self.team2_id,
-        }).run(connection))
+        }).run(g.connection))
 
     # Set stats for team
     def set_stats_team(self, team_id):
@@ -299,12 +347,12 @@ class Predictor():
         self.result["draw"]["warn_odds"] = self.result["draw"]["min_odds"] * 1.5
 
 
-predictor = Predictor(team1, team2, w_h2h=WEIGHT_H2H,
-                      w_home=WEIGHT_HOME, w_ext=WEIGHT_EXT)
-predictor.set_stats_team(team1)
-predictor.set_stats_team(team2)
-predictor.set_stats_h2h()
-predictor.set_odds()
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Run the Predictor app')
+    parser.add_argument('--setup', dest='run_setup', action='store_true')
 
-output = json.dumps(predictor.result, indent=4)
-print(output)
+    args = parser.parse_args()
+    if args.run_setup:
+        dbSetup()
+    else:
+        app.run(debug=True)
