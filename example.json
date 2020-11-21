@@ -1,6 +1,7 @@
 {
     "draw": {
-        "adjusted_drawrate": 0.08711586180568776,
+        "adjusted_drawrate": 0.10203442879499218,
+        "balanced_winrate": 0.08711586180568776,
         "good_odds": 14.922655565293663,
         "great_odds": 16.070552147239326,
         "min_odds": 11.478965819456663,
@@ -8,8 +9,9 @@
         "warn_odds": 17.218448729184995
     },
     "monaco": {
-        "adjusted_winrate": 0.19515174651651,
+        "adjusted_winrate": 0.22857142857142856,
         "avg_drawrate": 0.13968253968253969,
+        "balanced_winrate": 0.19515174651651,
         "ext": {
             "draw": 19,
             "drawrate": 0.30158730158730157,
@@ -41,8 +43,9 @@
         "warn_odds": 7.686326291079844
     },
     "paris-saint-germain": {
-        "adjusted_winrate": 0.7177323916777981,
+        "adjusted_winrate": 0.8406438631790744,
         "avg_drawrate": 0.06438631790744467,
+        "balanced_winrate": 0.7177323916777981,
         "ext": {
             "draw": 10,
             "drawrate": 0.14084507042253522,

@@ -249,17 +249,17 @@ class Predictor():
             x*self.result[self.team1_id]["adjusted_winrate"] + x*self.result[self.team2_id]["adjusted_winrate"] + x*self.result["draw"]["adjusted_drawrate"] - 1, x)[0]
         factor = float(factor)
 
-        self.result[self.team1_id]["adjusted_winrate"] = self.result[self.team1_id]["adjusted_winrate"] * factor
-        self.result[self.team2_id]["adjusted_winrate"] = self.result[self.team2_id]["adjusted_winrate"] * factor
-        self.result["draw"]["adjusted_drawrate"] = self.result["draw"]["adjusted_drawrate"] * factor
+        self.result[self.team1_id]["balanced_winrate"] = self.result[self.team1_id]["adjusted_winrate"] * factor
+        self.result[self.team2_id]["balanced_winrate"] = self.result[self.team2_id]["adjusted_winrate"] * factor
+        self.result["draw"]["balanced_winrate"] = self.result["draw"]["adjusted_drawrate"] * factor
 
         # Minimum odds
         self.result[self.team1_id]["min_odds"] = 1 / \
-            self.result[self.team1_id]["adjusted_winrate"]
+            self.result[self.team1_id]["balanced_winrate"]
         self.result[self.team2_id]["min_odds"] = 1 / \
-            self.result[self.team2_id]["adjusted_winrate"]
+            self.result[self.team2_id]["balanced_winrate"]
         self.result["draw"]["min_odds"] = 1 / \
-            self.result["draw"]["adjusted_drawrate"]
+            self.result["draw"]["balanced_winrate"]
 
         # Decent odds
         self.result[self.team1_id]["ok_odds"] = self.result[self.team1_id]["min_odds"] * 1.2
