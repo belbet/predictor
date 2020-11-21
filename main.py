@@ -75,9 +75,20 @@ def match_id_exists(match_id):
     return False
 
 
+def calculate_prediction(match_id, team1, team2):
+    predictor = Predictor(match_id, team1, team2, w_h2h=WEIGHT_H2H,
+                          w_home=WEIGHT_HOME, w_ext=WEIGHT_EXT)
+    app.logger.info("Set stats")
+    predictor.set_stats_team(team1)
+    predictor.set_stats_team(team2)
+    predictor.set_stats_h2h()
+    predictor.set_odds()
+    app.logger.info("Write to db")
+    predictor.write_prediction_to_db()
+
+
 @ app.route("/prediction", methods=['POST'])
 def post_prediction():
-    data = request.get_json()
     match_id = request.args['match_id']
     if match_id_exists(match_id):
         return Response("Match already exists", 200)
@@ -88,15 +99,7 @@ def post_prediction():
     app.logger.info("Init %s vs %s: match id %s", team1, team2, match_id)
     app.logger.info("Weights are H2H: %s, HOME: %s, EXT: %s", WEIGHT_H2H,
                     WEIGHT_HOME, WEIGHT_EXT)
-    predictor = Predictor(match_id, team1, team2, w_h2h=WEIGHT_H2H,
-                          w_home=WEIGHT_HOME, w_ext=WEIGHT_EXT)
-    app.logger.info("Set stats")
-    predictor.set_stats_team(team1)
-    predictor.set_stats_team(team2)
-    predictor.set_stats_h2h()
-    predictor.set_odds()
-    app.logger.info("Write to db")
-    predictor.write_prediction_to_db()
+    calculate_prediction(match_id, team1, team2)
     return Response(status=201)
 
 
