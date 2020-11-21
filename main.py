@@ -2,6 +2,7 @@ import argparse
 import json
 import os
 import decimal
+import time
 
 from rethinkdb import RethinkDB
 from rethinkdb.errors import RqlRuntimeError, RqlDriverError
@@ -14,6 +15,7 @@ load_dotenv()
 # Connections parameters
 RDB_HOST = os.environ.get('RDB_HOST') or 'localhost'
 RDB_DB = os.environ.get('RDB_DB') or 'test'
+RDB_TABLE = os.environ.get('RDB_TABLE') or 'matches'
 RDB_PORT = os.environ.get('RDB_PORT') or 28015
 RDB_PASS = os.environ.get('RDB_PASS') or ''
 r = RethinkDB()
@@ -73,11 +75,11 @@ def get_prediction():
     return json.dumps(predictor.result, indent=4)
 
 
-# 2017-08-01 00:00:00
+# 2017-08-01 00:00:00 - Start of the 2017-2018 season
 start_time = 1501545600
 
-# Today 19 Nov 2020 16:16
-end_time = 1605798958
+# Now
+end_time = int(time.time())
 
 print("Determining odds based on all matches played between",
       start_time, "and", end_time)
@@ -138,17 +140,17 @@ class Predictor():
         print(self.team2_id, "is ext")
 
     def _get_matches_home(self, team_id):
-        return list(r.table("matches").between(r.epoch_time(start_time), r.epoch_time(end_time), index='Date').filter({
+        return list(r.table(RDB_TABLE).between(r.epoch_time(start_time), r.epoch_time(end_time), index='Date').filter({
             "T1Id": team_id,
         }).run(g.connection))
 
     def _get_matches_ext(self, team_id):
-        return list(r.table("matches").between(r.epoch_time(start_time), r.epoch_time(end_time), index='Date').filter({
+        return list(r.table(RDB_TABLE).between(r.epoch_time(start_time), r.epoch_time(end_time), index='Date').filter({
             "T2Id": team_id,
         }).run(g.connection))
 
     def _get_matches_h2h(self):
-        return list(r.table("matches").between(r.epoch_time(start_time), r.epoch_time(end_time), index='Date').filter({
+        return list(r.table(RDB_TABLE).between(r.epoch_time(start_time), r.epoch_time(end_time), index='Date').filter({
             "T1Id": self.team1_id,
             "T2Id": self.team2_id,
         }).run(g.connection))
