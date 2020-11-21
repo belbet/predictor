@@ -89,11 +89,12 @@ def calculate_prediction(match_id, team1, team2):
 
 @ app.route("/prediction", methods=['POST'])
 def post_prediction():
-    match_id = request.args['match_id']
+    match_id = request.json['matchId']
     if match_id_exists(match_id):
         return Response("Match already exists", 200)
-    team1 = request.args['team1']
-    team2 = request.args['team2']
+    match_start = request.json['matchStart']
+    team1 = request.json['team1']
+    team2 = request.json['team2']
     if match_id == None or team1 == None or team2 == None:
         return {}
     app.logger.info("Init %s vs %s: match id %s", team1, team2, match_id)
