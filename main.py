@@ -1,8 +1,10 @@
+from logging.config import dictConfig
 import argparse
 import json
 import os
 import decimal
 import time
+import logging
 
 from rethinkdb import RethinkDB
 from rethinkdb.errors import RqlRuntimeError, RqlDriverError
@@ -19,6 +21,23 @@ RDB_TABLE = os.environ.get('RDB_TABLE') or 'matches'
 RDB_PORT = os.environ.get('RDB_PORT') or 28015
 RDB_PASS = os.environ.get('RDB_PASS') or ''
 r = RethinkDB()
+
+
+dictConfig({
+    'version': 1,
+    'formatters': {'default': {
+        'format': '[%(asctime)s] %(levelname)s in %(module)s: %(message)s',
+    }},
+    'handlers': {'wsgi': {
+        'class': 'logging.StreamHandler',
+        'stream': 'ext://flask.logging.wsgi_errors_stream',
+        'formatter': 'default'
+    }},
+    'root': {
+        'level': 'INFO',
+        'handlers': ['wsgi']
+    }
+})
 
 
 def dbSetup():
@@ -66,6 +85,9 @@ def get_prediction():
     team2 = request.args.get('team2')
     if team1 == None or team2 == None:
         return {}
+    app.logger.info("Init %s vs %s", team1, team2)
+    app.logger.info("Weights are H2H: %s, HOME: %s, EXT: %s", WEIGHT_H2H,
+                    WEIGHT_HOME, WEIGHT_EXT)
     predictor = Predictor(team1, team2, w_h2h=WEIGHT_H2H,
                           w_home=WEIGHT_HOME, w_ext=WEIGHT_EXT)
     predictor.set_stats_team(team1)
@@ -94,50 +116,16 @@ class Predictor():
         self.w_ext = w_ext
         self.w_tot = w_h2h + w_home + w_ext
         self.result = {}
-        self.result[team1_id] = {}
-        self.result[team1_id]["home"] = {}
-        self.result[team1_id]["ext"] = {}
-        self.result[team2_id] = {}
-        self.result[team2_id]["home"] = {}
-        self.result[team2_id]["ext"] = {}
         self.result["draw"] = {}
-        # Overall
-        # Team 1 Home
-        self.result[team1_id]["home"]["played"] = 0
-        self.result[team1_id]["home"]["win"] = 0
-        self.result[team1_id]["home"]["loss"] = 0
-        self.result[team1_id]["home"]["draw"] = 0
-        # Team 1 Ext
-        self.result[team1_id]["ext"]["played"] = 0
-        self.result[team1_id]["ext"]["win"] = 0
-        self.result[team1_id]["ext"]["loss"] = 0
-        self.result[team1_id]["ext"]["draw"] = 0
-        # Team 2 Home
-        self.result[team2_id]["home"]["played"] = 0
-        self.result[team2_id]["home"]["win"] = 0
-        self.result[team2_id]["home"]["loss"] = 0
-        self.result[team2_id]["home"]["draw"] = 0
-        # Team 2 Ext
-        self.result[team2_id]["ext"]["played"] = 0
-        self.result[team2_id]["ext"]["win"] = 0
-        self.result[team2_id]["ext"]["loss"] = 0
-        self.result[team2_id]["ext"]["draw"] = 0
-        # H2H
-        # Team 1
-        self.result[team1_id][team2_id] = {}
-        self.result[team1_id][team2_id]["played"] = 0
-        self.result[team1_id][team2_id]["win"] = 0
-        self.result[team1_id][team2_id]["loss"] = 0
-        self.result[team1_id][team2_id]["draw"] = 0
-        # Team 2
-        self.result[team2_id][team1_id] = {}
-        self.result[team2_id][team1_id]["played"] = 0
-        self.result[team2_id][team1_id]["win"] = 0
-        self.result[team2_id][team1_id]["loss"] = 0
-        self.result[team2_id][team1_id]["draw"] = 0
-        print("Init teams", self.team1_id, "and", self.team2_id)
-        print(self.team1_id, "is home")
-        print(self.team2_id, "is ext")
+        # Init result struct
+        for team_id in [team1_id, team2_id]:
+            self.result[team_id] = {}
+            for keyword in ["home", "ext", team1_id, team2_id]:
+                if team_id == keyword:
+                    continue
+                self.result[team_id][keyword] = {}
+                for stat in ["played", "win", "loss", "draw"]:
+                    self.result[team_id][keyword][stat] = 0
 
     def _get_matches_home(self, team_id):
         return list(r.table(RDB_TABLE).between(r.epoch_time(start_time), r.epoch_time(end_time), index='Date').filter({
@@ -168,10 +156,6 @@ class Predictor():
                 self.result[team_id]["home"]["loss"] += 1
             elif m["WinnerID"] == "":
                 self.result[team_id]["home"]["draw"] += 1
-        # self.result[team_id]["home"]["winrate"] = self.result[team_id]["home"]["win"] / \
-        #     self.result[team_id]["played"]
-        # self.result[team_id]["home"]["drawrate"] = self.result[team_id]["home"]["draw"] / \
-        #     self.result[team_id]["home"]["played"]
 
         # Match ext
         for m in matches_ext:
@@ -182,20 +166,6 @@ class Predictor():
                 self.result[team_id]["ext"]["loss"] += 1
             elif m["WinnerID"] == "":
                 self.result[team_id]["ext"]["draw"] += 1
-        # self.result[team_id]["ext"]["winrate"] = self.result[team_id]["ext"]["win"] / \
-        #     self.result[team_id]["ext"]["played"]
-        # self.result[team_id]["ext"]["drawrate"] = self.result[team_id]["ext"]["draw"] / \
-        #     self.result[team_id]["ext"]["played"]
-        print(team_id, ":", "home")
-        print("played:", self.result[team_id]["home"]["played"])
-        print("win:", self.result[team_id]["home"]["win"])
-        print("draw:", self.result[team_id]["home"]["draw"])
-        print("loss:", self.result[team_id]["home"]["loss"])
-        print(team_id, ":", "ext")
-        print("played:", self.result[team_id]["ext"]["played"])
-        print("win:", self.result[team_id]["ext"]["win"])
-        print("draw:", self.result[team_id]["ext"]["draw"])
-        print("loss:", self.result[team_id]["ext"]["loss"])
 
     def set_stats_h2h(self):
         matches_h2h = self._get_matches_h2h()
@@ -294,9 +264,6 @@ class Predictor():
         for team, stats in self.result.items():
             for key, content in stats.items():
                 if isinstance(content, dict):
-                    # Example
-                    # self.result[self.team1_id]["home"]["winrate"] = self.result[self.team1_id]["home"]["win"] / \
-                    #     self.result[self.team1_id]["home"]["played"]
                     try:
                         self.result[team][key]["winrate"] = self.result[team][key]["win"] / \
                             self.result[team][key]["played"]
