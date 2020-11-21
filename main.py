@@ -249,34 +249,19 @@ class Predictor():
             x*self.result[self.team1_id]["adjusted_winrate"] + x*self.result[self.team2_id]["adjusted_winrate"] + x*self.result["draw"]["adjusted_drawrate"] - 1, x)[0]
         factor = float(factor)
 
-        self.result[self.team1_id]["balanced_winrate"] = self.result[self.team1_id]["adjusted_winrate"] * factor
-        self.result[self.team2_id]["balanced_winrate"] = self.result[self.team2_id]["adjusted_winrate"] * factor
-        self.result["draw"]["balanced_winrate"] = self.result["draw"]["adjusted_drawrate"] * factor
-
-        # Minimum odds
-        self.result[self.team1_id]["min_odds"] = 1 / \
-            self.result[self.team1_id]["balanced_winrate"]
-        self.result[self.team2_id]["min_odds"] = 1 / \
-            self.result[self.team2_id]["balanced_winrate"]
-        self.result["draw"]["min_odds"] = 1 / \
-            self.result["draw"]["balanced_winrate"]
-
-        # Decent odds
-        self.result[self.team1_id]["ok_odds"] = self.result[self.team1_id]["min_odds"] * 1.2
-        self.result[self.team2_id]["ok_odds"] = self.result[self.team2_id]["min_odds"] * 1.2
-        self.result["draw"]["ok_odds"] = self.result["draw"]["min_odds"] * 1.2
-        # Good odds
-        self.result[self.team1_id]["good_odds"] = self.result[self.team1_id]["min_odds"] * 1.3
-        self.result[self.team2_id]["good_odds"] = self.result[self.team2_id]["min_odds"] * 1.3
-        self.result["draw"]["good_odds"] = self.result["draw"]["min_odds"] * 1.3
-        # Very good odds
-        self.result[self.team1_id]["great_odds"] = self.result[self.team1_id]["min_odds"] * 1.4
-        self.result[self.team2_id]["great_odds"] = self.result[self.team2_id]["min_odds"] * 1.4
-        self.result["draw"]["great_odds"] = self.result["draw"]["min_odds"] * 1.4
-        # Improbable odds
-        self.result[self.team1_id]["warn_odds"] = self.result[self.team1_id]["min_odds"] * 1.5
-        self.result[self.team2_id]["warn_odds"] = self.result[self.team2_id]["min_odds"] * 1.5
-        self.result["draw"]["warn_odds"] = self.result["draw"]["min_odds"] * 1.5
+        for outcome in [self.team1_id, self.team2_id, "draw"]:
+            if outcome == "draw":
+                self.result[outcome]["balanced_drawrate"] = self.result[outcome]["adjusted_drawrate"] * factor
+                self.result[outcome]["min_odds"] = 1 / \
+                    self.result[outcome]["balanced_drawrate"]
+            else:
+                self.result[outcome]["balanced_winrate"] = self.result[outcome]["adjusted_winrate"] * factor
+                self.result[outcome]["min_odds"] = 1 / \
+                    self.result[outcome]["balanced_winrate"]
+            self.result[outcome]["ok_odds"] = self.result[outcome]["min_odds"] * 1.2
+            self.result[outcome]["good_odds"] = self.result[outcome]["min_odds"] * 1.3
+            self.result[outcome]["great_odds"] = self.result[outcome]["min_odds"] * 1.4
+            self.result[outcome]["warn_odds"] = self.result[outcome]["min_odds"] * 1.5
 
 
 if __name__ == "__main__":

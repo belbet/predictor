@@ -8,7 +8,7 @@ Fetches matches from RethinkDB previously filled by [Betrievor](https://github.c
 {
     "draw": {
         "adjusted_drawrate": 0.10203442879499218,
-        "balanced_winrate": 0.08711586180568776,
+        "balanced_drawrate": 0.08711586180568776,
         "good_odds": 14.922655565293663,
         "great_odds": 16.070552147239326,
         "min_odds": 11.478965819456663,
@@ -84,6 +84,4 @@ Fetches matches from RethinkDB previously filled by [Betrievor](https://github.c
         "warn_odds": 2.089915430030326
     }
 }
-
-
 ```
