@@ -182,42 +182,6 @@ class Predictor():
                 self.result[self.team2_id][self.team1_id]["draw"] += 1
                 self.result[self.team1_id][self.team2_id]["draw"] += 1
 
-    def _set_winrate(self):
-        # TEAM 1
-        # Home
-        self.result[self.team1_id]["home"]["winrate"] = self.result[self.team1_id]["home"]["win"] / \
-            self.result[self.team1_id]["home"]["played"]
-        self.result[self.team1_id]["home"]["drawrate"] = self.result[self.team1_id]["home"]["draw"] / \
-            self.result[self.team1_id]["home"]["played"]
-        # Ext
-        self.result[self.team1_id]["ext"]["winrate"] = self.result[self.team1_id]["ext"]["win"] / \
-            self.result[self.team1_id]["ext"]["played"]
-        self.result[self.team1_id]["ext"]["drawrate"] = self.result[self.team1_id]["ext"]["draw"] / \
-            self.result[self.team1_id]["ext"]["played"]
-        # H2H
-        self.result[self.team1_id][self.team2_id]["winrate"] = self.result[self.team1_id][self.team2_id]["win"] / \
-            self.result[self.team1_id][self.team2_id]["played"]
-        self.result[self.team1_id][self.team2_id]["drawrate"] = self.result[self.team1_id][self.team2_id]["draw"] / \
-            self.result[self.team1_id][self.team2_id]["played"]
-
-        # TEAM 2
-        # Home
-        self.result[self.team2_id]["home"]["winrate"] = self.result[self.team2_id]["home"]["win"] / \
-            self.result[self.team2_id]["home"]["played"]
-        self.result[self.team2_id]["home"]["drawrate"] = self.result[self.team2_id]["home"]["draw"] / \
-            self.result[self.team2_id]["home"]["played"]
-        # Ext
-        self.result[self.team2_id]["ext"]["winrate"] = self.result[self.team2_id]["ext"]["win"] / \
-            self.result[self.team2_id]["ext"]["played"]
-        self.result[self.team2_id]["ext"]["drawrate"] = self.result[self.team2_id]["ext"]["draw"] / \
-            self.result[self.team2_id]["ext"]["played"]
-
-        # H2H
-        self.result[self.team2_id][self.team1_id]["winrate"] = self.result[self.team2_id][self.team1_id]["win"] / \
-            self.result[self.team2_id][self.team1_id]["played"]
-        self.result[self.team2_id][self.team1_id]["drawrate"] = self.result[self.team2_id][self.team1_id]["draw"] / \
-            self.result[self.team2_id][self.team1_id]["played"]
-
     def _adjust_winrate(self, team=""):
         """
         Adjust winrates with weights
@@ -260,7 +224,7 @@ class Predictor():
         avg_drawrate /= 2
         self.result["draw"]["adjusted_drawrate"] = avg_drawrate
 
-    def _set_winrate2(self):
+    def _set_winrate(self):
         for team, stats in self.result.items():
             for key, content in stats.items():
                 if isinstance(content, dict):
@@ -277,8 +241,7 @@ class Predictor():
 
     def set_odds(self):
         x = Symbol('x')
-        # self._set_winrate()
-        self._set_winrate2()
+        self._set_winrate()
         self._adjust_winrate("home")
         self._adjust_winrate("ext")
         self._adjust_drawrate()
