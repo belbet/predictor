@@ -7,6 +7,7 @@ import time
 import logging
 
 from predictor import Predictor
+from counselor import Counselor
 from rethinkdb import RethinkDB
 from rethinkdb.errors import RqlRuntimeError, RqlDriverError
 from settings import *
@@ -22,13 +23,15 @@ def dbSetup():
     try:
         r.db_create(RDB_PREDICTOR_DB).run(connection_predictor)
     except RqlRuntimeError:
-        print('Predictor database already exists.')
+        print(f'Predictor database {RDB_PREDICTOR_DB} already exists.')
     try:
         r.db(RDB_PREDICTOR_DB).table_create(
-            RDB_PREDICTOR_TABLE, primary_key='matchId').run(connection_predictor)
+            RDB_PREDICTOR_TABLE, primary_key='match_id').run(connection_predictor)
+        r.table(RDB_PREDICTOR_TABLE).index_create(
+            'match_date').run(connection_predictor)
         print('Predictor table created !')
     except RqlRuntimeError:
-        print('Predictor table already')
+        print(f'Predictor table {RDB_PREDICTOR_TABLE} already exists')
         print('Database setup completed. Now run the app without --setup.')
     finally:
         connection_raw.close()
@@ -104,6 +107,38 @@ def post_prediction():
     return Response(status=201)
 
 
+def counseling():
+    print(start_time, start_time + 86400 * 7)
+    matches = list(r.table(RDB_RAW_TABLE).between(r.epoch_time(
+        start_time), r.epoch_time(start_time + 86400 * 7), index='Date').run(g.connection_raw))
+    for match in matches:
+        counsel = Counselor(match)
+        counsel.set_min_odds()
+        app.logger.info(
+            f"min odds: {counsel.team1_min_odds} ; {counsel.team2_min_odds} ; {counsel.draw_min_odds}")
+        counsel.set_good_odds()
+        app.logger.info(
+            f"good odds: {counsel.team1_good_odds} ; {counsel.team2_good_odds} ; {counsel.draw_good_odds}")
+        counsel.write_to_db()
+
+
+@ app.route("/counsels", methods=['POST'])
+def post_counsels():
+    """
+    Calculate min odds and good odds for all matches present in RAW_DB
+    """
+    counseling()
+    return Response(status=201)
+
+
+@ app.route("/counsels", methods=['GET'])
+def get_counsels():
+    counsels = list(r.table(RDB_PREDICTOR_TABLE).between(r.epoch_time(
+        start_time), r.epoch_time(start_time) + 86400 * 7, index='match_date').run(g.connection_predictor))
+    app.logger.info(counsels)
+    return jsonify(counsels)
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Run the Predictor app')
     parser.add_argument('--setup', dest='run_setup', action='store_true')
@@ -112,4 +147,4 @@ if __name__ == "__main__":
     if args.run_setup:
         dbSetup()
     else:
-        app.run(debug=True)
+        app.run(debug=True, port=5005)
